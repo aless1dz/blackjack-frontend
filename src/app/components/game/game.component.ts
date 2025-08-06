@@ -1053,22 +1053,22 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   getCardDisplay(card: any): string {
-    // Si la carta tiene la propiedad formatted del backend
+    // Si la carta tiene la propiedad formatted del backend (que ahora es directamente el emoji)
     if (typeof card === 'object' && card.formatted) {
       return card.formatted;
     }
     
-    // Si el card es un objeto formateado del backend con display
+    // Si el card es un objeto con display
     if (typeof card === 'object' && card.display) {
       return card.display;
     }
     
-    // Si es un string directo (ya formateado)
+    // Si es un string directo (ya formateado con emoji)
     if (typeof card === 'string') {
       return card;
     }
     
-    // Fallback - mostrar la carta sin formato
+    // Fallback - mostrar la carta tal como viene
     return card?.card || card || '?';
   }
 
