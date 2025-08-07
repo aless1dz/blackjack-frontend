@@ -10,12 +10,14 @@ import {
   RematchResponse, 
   GameInfo 
 } from '../models/game.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameService {
-  private apiUrl = 'http://localhost:3334/api';
+  private apiUrl = environment.apiUrl;
+  
 
   constructor(private http: HttpClient) {}
 

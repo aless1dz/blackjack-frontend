@@ -4,9 +4,6 @@ import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable, share, takeUntil } from 'rxjs';
 import { Subject } from 'rxjs';
 import { AuthService } from './auth.service';
-import { environment } from '../../environments/environment';
-
-const socketUrl = environment.apiUrlSockets;
 
 @Injectable({
   providedIn: 'root',
@@ -34,55 +31,33 @@ export class SocketService {
       return;
     }
 
-    console.log('[SOCKET] 🔄 Iniciando conexión...');
+    console.log('[SOCKET] 🔄 Conectando...');
     
     // Limpiar socket anterior
     this.cleanup();
 
-    this.socket = io(socketUrl, {
+    this.socket = io('http://localhost:3333', {
       auth: { token: token },
-      transports: ['websocket', 'polling'], // ✅ Permitir fallback a polling
-      forceNew: false, // ✅ Permitir reutilizar conexión
-      timeout: 5000, // ✅ Timeout más corto
-      reconnection: true, // ✅ Reconexión automática
-      reconnectionAttempts: 3, // ✅ Máximo 3 intentos
-      reconnectionDelay: 1000, // ✅ Delay de 1s entre intentos
-      autoConnect: true
+      transports: ['websocket'],
+      forceNew: true,
+      timeout: 10000,
     });
 
     // Eventos básicos de conexión
     this.socket.on('connect', () => {
-      console.log('[SOCKET] ✅ Socket connected successfully');
-      console.log(`[SOCKET] 🆔 Socket ID: ${this.socket?.id}`);
+      console.log('[SOCKET] ✅ Conectado exitosamente');
       this.connectionStatus.next(true);
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log(`[SOCKET] ❌ Desconectando socket...`);
-      console.log(`[SOCKET] 📊 Razón: ${reason}`);
+      console.log('[SOCKET] ❌ Desconectado:', reason);
       this.connectionStatus.next(false);
       this.eventObservables.clear(); // Limpiar observables
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('[SOCKET] ❌ Error de conexión:', error?.message || error);
+      console.error('[SOCKET] ❌ Error de conexión:', error);
       this.connectionStatus.next(false);
-    });
-
-    this.socket.on('reconnect', (attemptNumber) => {
-      console.log(`[SOCKET] 🔄 Reconectado después de ${attemptNumber} intentos`);
-    });
-
-    this.socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log(`[SOCKET] 🔄 Intento de reconexión #${attemptNumber}`);
-    });
-
-    this.socket.on('reconnect_error', (error) => {
-      console.error('[SOCKET] ❌ Error en reconexión:', error);
-    });
-
-    this.socket.on('reconnect_failed', () => {
-      console.error('[SOCKET] 💥 Falló la reconexión después de todos los intentos');
     });
   }
 
@@ -104,7 +79,7 @@ export class SocketService {
 
   joinGameRoom(gameId: number): void {
     if (this.socket?.connected) {
-      this.socket.emit('join:game', gameId); // ✅ Enviar solo el número, no objeto
+      this.socket.emit('join:game', { gameId });
       console.log(`[SOCKET] 🚪 Joined game room: ${gameId}`);
     }
   }
@@ -116,7 +91,7 @@ export class SocketService {
     }
   }
 
-  // ✅ MÉTODO SIMPLIFICADO - manejo de eventos con mejor control de errores
+  // ✅ MÉTODO PRINCIPAL - crea observables SINGLETON para cada evento
   on(event: string): Observable<any> {
     // Si ya existe un observable para este evento, devuelve el mismo
     if (this.eventObservables.has(event)) {
@@ -127,63 +102,27 @@ export class SocketService {
     console.log(`[SOCKET] 🆕 Creando nuevo observable para ${event}`);
 
     const observable = new Observable((observer) => {
-      let handler: ((data: any) => void) | null = null;
-      let cleanupFunction: (() => void) | null = null;
-      
-      const setupListener = () => {
-        try {
-          if (!this.socket) {
-            console.log(`[SOCKET] Socket not available for event: ${event}`);
-            observer.error(new Error('Socket not connected'));
-            return;
-          }
-
-          handler = (data: any) => {
-            const timestamp = new Date().toLocaleTimeString();
-            console.log(`[SOCKET] 📡 [${timestamp}] ${event}:`, data);
-            observer.next(data);
-          };
-
-          this.socket.on(event, handler);
-          console.log(`[SOCKET] ✅ Listener configurado para ${event}`);
-          
-        } catch (error) {
-          console.log(`[SOCKET] ❌ Error in event ${event}:`, error);
-          observer.error(error);
-        }
-      };
-
-      // Configurar cleanup
-      cleanupFunction = () => {
-        if (handler && this.socket) {
-          console.log(`[SOCKET] 🧹 Limpiando listener para ${event}`);
-          this.socket.off(event, handler);
-          handler = null;
-        }
-      };
-
-      // Intentar configurar el listener
-      if (this.socket?.connected) {
-        setupListener();
-      } else {
-        // Esperar a la conexión
-        const connectionSub = this.isConnected$.subscribe((connected) => {
-          if (connected) {
-            setupListener();
-            connectionSub.unsubscribe();
-          }
-        });
-        
-        // Agregar cleanup de la suscripción
-        const originalCleanup = cleanupFunction;
-        cleanupFunction = () => {
-          connectionSub.unsubscribe();
-          if (originalCleanup) originalCleanup();
-        };
+      if (!this.socket?.connected) {
+        console.warn(`[SOCKET] ⚠️ Socket no disponible para ${event}`);
+        observer.error('Socket not connected');
+        return;
       }
 
-      // Retornar función de cleanup
-      return cleanupFunction;
+      const handler = (data: any) => {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[SOCKET] 📡 [${timestamp}] ${event}:`, data);
+        observer.next(data);
+      };
+
+      this.socket.on(event, handler);
+
+      // Cleanup
+      return () => {
+        if (this.socket) {
+          console.log(`[SOCKET] 🧹 Limpiando listener para ${event}`);
+          this.socket.off(event, handler);
+        }
+      };
     }).pipe(
       share(), // ✅ COMPARTIR el observable entre múltiples suscriptores
       takeUntil(this.destroy$) // ✅ Auto-cleanup cuando se destruye el servicio

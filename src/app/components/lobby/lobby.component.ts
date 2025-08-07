@@ -493,45 +493,59 @@ export class LobbyComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.currentUser = this.authService.getCurrentUser();
-    if (!this.currentUser) {
-      this.router.navigate(['/auth/login']);
-      return;
-    }
-    
-    // Conectar sockets si no están conectados
-    this.socketService.connect();
-    
-    this.loadAvailableGames();
-    this.setupSocketListeners();
+  this.currentUser = this.authService.getCurrentUser();
+  if (!this.currentUser) {
+    this.router.navigate(['/auth/login']);
+    return;
   }
 
+  this.socketService.connect();
+
+  const sub = this.socketService.isConnected$.subscribe(isConnected => {
+    if (isConnected) {
+      this.setupSocketListeners();
+      this.loadAvailableGames();
+      sub.unsubscribe(); // Sólo quieres hacer esto 1 vez
+    }
+  });
+
+  this.subscriptions.push(sub);
+}
+
+
   ngOnDestroy() {
+    console.log('[SOCKET] ➖ Removiendo listener para chisme:newGameCreated');
+    console.log('[SOCKET] ➖ Removiendo listener para chisme:gameUpdate');
+    console.log('[SOCKET] ➖ Removiendo listener para chisme:playerJoined');
+    console.log('[SOCKET] ➖ Removiendo listener para chisme:playerLeft');
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions = [];
   }
 
   setupSocketListeners() {
+    // ✅ Usar el método genérico on() en lugar de métodos específicos
+    
     // Escuchar cuando se creen nuevos juegos
-    const newGameSub = this.socketService.onNewGameCreated().subscribe(() => {
-      console.log('New game created event received');
+    const newGameSub = this.socketService.on('chisme:newGameCreated').subscribe(() => {
+      console.log('[SOCKET] ➕ Agregando nuevo listener para chisme:newGameCreated');
       this.loadAvailableGames();
     });
 
     // Escuchar actualizaciones de juegos
-    const gameUpdateSub = this.socketService.onGameUpdate().subscribe(() => {
-      console.log('Game update event received');
+    const gameUpdateSub = this.socketService.on('chisme:gameUpdate').subscribe(() => {
+      console.log('[SOCKET] ➕ Agregando nuevo listener para chisme:gameUpdate');
       this.loadAvailableGames();
     });
 
     // Escuchar cuando un jugador se une a un juego
-    const playerJoinedSub = this.socketService.onPlayerJoined().subscribe(() => {
-      console.log('Player joined event received');
+    const playerJoinedSub = this.socketService.on('chisme:playerJoined').subscribe(() => {
+      console.log('[SOCKET] ➕ Agregando nuevo listener para chisme:playerJoined');
       this.loadAvailableGames();
     });
 
     // Escuchar cuando un jugador deja un juego
-    const playerLeftSub = this.socketService.onPlayerLeft().subscribe(() => {
-      console.log('Player left event received');
+    const playerLeftSub = this.socketService.on('chisme:playerLeft').subscribe(() => {
+      console.log('[SOCKET] ➕ Agregando nuevo listener para chisme:playerLeft');
       this.loadAvailableGames();
     });
 
@@ -542,11 +556,9 @@ export class LobbyComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    console.log('Loading available games...');
 
     this.gameService.listAvailableGames().subscribe({
       next: (games: Game[]) => {
-        console.log('Available games loaded:', games);
         this.availableGames = games;
         this.isLoading = false;
       },
@@ -582,7 +594,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
 
     this.gameService.createGame(gameData).subscribe({
       next: (response: any) => {
-        console.log('Game created successfully:', response);
         this.isLoading = false;
         this.hideCreateGameModal();
         
@@ -608,7 +619,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.joinRetryAttempt = 0;
 
-    console.log(`Attempting to join game ${gameId}`);
     
     this.attemptJoinGame(gameId, 3); // 3 intentos máximo
   }
@@ -618,7 +628,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
     
     this.gameService.joinGame(gameId).subscribe({
       next: (response) => {
-        console.log(`Successfully joined game ${gameId}:`, response);
         this.isJoining = false;
         this.joinRetryAttempt = 0;
         this.router.navigate(['/game', gameId]);
@@ -628,7 +637,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
         
         // Si el usuario ya está en la partida, navegar directamente al juego
         if (error.status === 400 && error.error?.message?.includes('Ya estás en esta partida')) {
-          console.log(`User already in game ${gameId}, navigating to game...`);
           this.isJoining = false;
           this.joinRetryAttempt = 0;
           this.router.navigate(['/game', gameId]);
@@ -637,7 +645,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
         
         // Si es un error de concurrencia y tenemos intentos restantes
         if (error.status === 503 && error.error?.retry && currentAttempt < maxRetries) {
-          console.log(`Retrying join game ${gameId} in 1 second (attempt ${currentAttempt + 1}/${maxRetries})`);
           setTimeout(() => {
             this.attemptJoinGame(gameId, maxRetries, currentAttempt + 1);
           }, 1000); // Esperar 1 segundo antes de reintentar

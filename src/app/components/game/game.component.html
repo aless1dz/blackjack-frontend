@@ -1,0 +1,443 @@
+<div class="game-container">
+  <div class="game-header">
+    <h1>{{ gameInfo?.hostName || 'Partida de Blackjack' }}</h1>
+    <div class="game-actions">
+      <div
+        *ngIf="isHost && getPendingCardRequests() > 0"
+        class="pending-requests"
+      >
+        <span class="requests-badge"
+          >{{ getPendingCardRequests() }} solicitud(es) pendiente(s)</span
+        >
+      </div>
+      <button (click)="debugSocketState()" class="debug-btn" style="margin-right: 10px; background: orange; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 0.8rem;">
+        🐛 Debug Sockets
+      </button>
+      <button (click)="leaveGame()" class="leave-btn">
+        Salir del Juego
+      </button>
+    </div>
+  </div>
+
+  <div class="game-content" *ngIf="gameInfo">
+    <!-- Estado del juego -->
+    <div class="game-status">
+      <h2>Estado: {{ getGameStatusText() }}</h2>
+      <div *ngIf="gameInfo.status === 'waiting'" class="waiting-message">
+        <p>
+          Esperando jugadores... ({{ getNonHostPlayersCount() }}/{{
+            gameInfo.maxPlayers
+          }})
+        </p>
+
+        <div class="players-list">
+          <h4>Jugadores en sala:</h4>
+          <ul>
+            <li *ngFor="let player of gameInfo.players">
+              {{ player.user?.fullName || player.user?.email || 'Usuario' }}
+              <span *ngIf="player.isHost" class="host-badge">HOST</span>
+              <span
+                *ngIf="player.userId === currentUser?.id"
+                class="you-badge"
+                >TÚ</span
+              >
+            </li>
+          </ul>
+        </div>
+        <button
+          *ngIf="isHost && (gameInfo.players?.length || 0) >= 2"
+          (click)="startGame()"
+          class="start-btn"
+          [disabled]="isLoading"
+        >
+          {{ isLoading ? 'Iniciando...' : 'Iniciar Juego' }}
+        </button>
+        <p
+          *ngIf="isHost && (gameInfo.players?.length || 0) < 2"
+          class="need-players"
+        >
+          Se necesitan al menos 2 jugadores para iniciar
+        </p>
+        <p *ngIf="!isHost" class="waiting-host">
+          Esperando a que el host inicie el juego...
+        </p>
+      </div>
+    </div>
+
+    <!-- Mesa de juego -->
+    <div class="game-table" *ngIf="gameInfo.status !== 'waiting'">
+      <!-- Área de jugadores -->
+      <div class="players-area">
+        <div
+          *ngFor="let player of gameInfo.players"
+          class="player-slot"
+          [class.current-player]="isCurrentPlayer(player)"
+          [class.current-user]="isCurrentUser(player)"
+          [class.finished]="player.isFinished"
+          [class.standing]="player.isStand || player.isStanding"
+        >
+          <div class="player-info">
+            <h3>
+              {{
+                player.user?.fullName ||
+                  player.user?.email ||
+                  player.name ||
+                  'Usuario'
+              }}
+              <span *ngIf="player.isHost" class="host-badge">DEALER</span>
+              <span *ngIf="isCurrentUser(player)" class="you-badge"
+                >TÚ</span
+              >
+            </h3>
+            <div class="player-stats">
+              <!-- ✅ Lógica simplificada: mostrar puntos reales cuando termine el juego -->
+              <span 
+                class="points" 
+                *ngIf="gameInfo.status === 'finished' || isHost || isCurrentUser(player)"
+              >
+                Puntos: {{ player.totalPoints || player.points || 0 }}
+              </span>
+              <span 
+                class="points" 
+                *ngIf="gameInfo.status !== 'finished' && !isHost && !isCurrentUser(player)"
+              >
+                Puntos: ???
+              </span>
+              <span
+                class="status"
+                [class.busted]="
+                  isHost && (player.totalPoints || player.points || 0) > 21
+                "
+                [class.blackjack]="
+                  isHost &&
+                  (player.totalPoints || player.points || 0) === 21 &&
+                  player.cards?.length === 2
+                "
+              >
+                {{ getPlayerStatus(player) }}
+              </span>
+            </div>
+          </div>
+          <!-- Cartas del jugador -->
+          <div class="player-cards">
+            <!-- Mostrar cartas formateadas del backend -->
+            <div
+              *ngFor="let card of getPlayerCards(player)"
+              class="card"
+              [class]="getCardImageClass(card)"
+              [class.hidden]="shouldHideCard(player, card)"
+            >
+              <div
+                class="card-content"
+                *ngIf="!shouldHideCard(player, card)"
+              >
+                <div class="card-value">{{ getCardDisplay(card) }}</div>
+              </div>
+              <div
+                class="card-content card-back-content"
+                *ngIf="shouldHideCard(player, card)"
+              >
+                <div class="card-back-pattern">🂠</div>
+              </div>
+            </div>
+
+            <!-- Mazo visual para el dealer -->
+            <div *ngIf="player.isHost" class="dealer-deck">
+              <div class="deck-card">
+                <div class="deck-content">
+                  <div class="deck-pattern">🃏</div>
+                  <div class="deck-label">MAZO</div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              *ngIf="
+                !getPlayerCards(player) ||
+                getPlayerCards(player).length === 0
+              "
+              class="no-cards"
+            >
+              Sin cartas
+            </div>
+          </div>
+
+          <!-- Acciones del jugador -->
+          <div class="player-actions" *ngIf="gameInfo.status === 'playing'">
+            <!-- Botones para el jugador actual en su turno (SOLO para jugadores NO-HOST) -->
+            <div
+              *ngIf="
+                isCurrentUser(player) &&
+                isCurrentPlayer(player) &&
+                !player.isHost
+              "
+              class="current-player-actions"
+            >
+              <button
+                (click)="requestCard()"
+                class="action-btn hit-btn"
+                [disabled]="
+                  isLoading ||
+                  player.isStand || player.isStanding ||
+                  player.isFinished ||
+                  player.hasCardRequest
+                "
+              >
+                {{
+                  player.hasCardRequest
+                    ? 'Esperando al anfitrión...'
+                    : isLoading
+                    ? 'Solicitando...'
+                    : 'Pedir Carta'
+                }}
+              </button>
+              <button
+                (click)="stand()"
+                class="action-btn stand-btn"
+                [disabled]="
+                  isLoading ||
+                  player.isStand || player.isStanding ||
+                  player.isFinished
+                "
+              >
+                {{ isLoading ? 'Plantándose...' : 'Plantarse' }}
+              </button>
+            </div>
+
+            <!-- Alertas de solicitud de carta para el host -->
+            <div
+              *ngIf="isHost && player.hasCardRequest"
+              class="card-request-alert"
+            >
+              <p class="request-message">
+                🃏
+                {{
+                  player.user?.fullName || player.user?.email || player.name
+                }}
+                está pidiendo una carta
+              </p>
+              <button
+                (click)="dealCardToPlayer(player.id)"
+                class="action-btn approve-btn"
+                [disabled]="isLoading"
+              >
+                {{ isLoading ? 'Dando carta...' : 'Dar Carta' }}
+              </button>
+            </div>
+
+            <!-- Solo mensaje informativo cuando es el turno de otro jugador -->
+            <div
+              *ngIf="
+                isHost &&
+                !isCurrentUser(player) &&
+                isCurrentPlayer(player) &&
+                !player.hasCardRequest
+              "
+              class="host-actions"
+            >
+              <p class="turn-indicator">
+                Es el turno de
+                {{
+                  player.user?.fullName || player.user?.email || player.name
+                }}
+              </p>
+              <p class="host-instruction">
+                ⏳ Esperando que
+                {{ player.user?.fullName || player.name }} solicite una
+                carta o se plante
+              </p>
+            </div>
+
+            <!-- Indicador de espera para otros jugadores -->
+            <div
+              *ngIf="
+                !isCurrentUser(player) && !isHost && isCurrentPlayer(player)
+              "
+              class="waiting-indicator"
+            >
+              <p>
+                Esperando que
+                {{
+                  player.user?.fullName || player.user?.email || player.name
+                }}
+                tome su turno...
+              </p>
+            </div>
+
+            <!-- Indicación especial para el dealer -->
+            <div
+              *ngIf="player.isHost && isCurrentPlayer(player)"
+              class="dealer-turn-indicator"
+            >
+              <p>🎲 Es el turno del dealer - revelando cartas...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información del turno -->
+      
+
+      <!-- Resultado del juego -->
+      <div class="game-result" *ngIf="gameInfo.status === 'finished'">
+        <h2>🎉 Juego Terminado</h2>
+        <div *ngIf="gameInfo.winner" class="winner-announcement">
+          <h3>
+            ¡Ganador:
+            {{
+              gameInfo.winner.user?.fullName ||
+                gameInfo.winner.user?.email ||
+                gameInfo.winner.name
+            }}!
+          </h3>
+          <p>
+            Puntos:
+            {{ gameInfo.winner.totalPoints || gameInfo.winner.points }}
+          </p>
+        </div>
+        <div *ngIf="!gameInfo.winner" class="no-winner">
+          <h3>Empate - No hay ganador</h3>
+        </div>
+
+        <!-- Botones de revancha -->
+        <div class="rematch-section" *ngIf="isHost">
+          <button
+            (click)="proposeRematch()"
+            class="rematch-btn"
+            [disabled]="isLoading"
+          >
+            {{ isLoading ? 'Proponiendo...' : 'Proponer Revancha' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div class="loading" *ngIf="!gameInfo">Cargando juego...</div>
+
+  <!-- Modal de revancha propuesta -->
+  <div 
+    *ngIf="showRematchModal" 
+    class="modal-overlay" 
+    (click)="closeRematchModal()"
+  >
+    <div class="modal-content rematch-modal" (click)="$event.stopPropagation()">
+      <h3>🎮 ¡Revancha Propuesta!</h3>
+      
+      <div class="rematch-info">
+        <p><strong>{{ rematchData?.hostName || 'El anfitríon' }}</strong> ha propuesto una revancha.</p>
+        <div class="new-game-details">
+          <p><strong>Nueva partida:</strong> {{ rematchData?.newGame?.hostName }}</p>
+          <p><strong>Máx jugadores:</strong> {{ rematchData?.newGame?.maxPlayers }}</p>
+        </div>
+      </div>
+
+      <div class="rematch-question">
+        <p>¿Quieres unirte a la revancha?</p>
+      </div>
+
+      <div class="rematch-actions">
+        <button 
+          (click)="respondToRematch(true)" 
+          class="accept-btn"
+          [disabled]="isLoading"
+        >
+          {{ isLoading ? 'Aceptando...' : '✅ Sí, jugar revancha' }}
+        </button>
+        <button 
+          (click)="respondToRematch(false)" 
+          class="decline-btn"
+          [disabled]="isLoading"
+        >
+          {{ isLoading ? 'Rechazando...' : '❌ No, gracias' }}
+        </button>
+      </div>
+
+      <!-- Estado de respuestas de otros jugadores -->
+      <div class="rematch-status" *ngIf="rematchResponses.length > 0">
+        <h4>Respuestas de jugadores:</h4>
+        <div class="player-responses">
+          <div 
+            *ngFor="let response of rematchResponses" 
+            class="player-response"
+            [class.accepted]="response.accepted"
+            [class.declined]="!response.accepted"
+          >
+            <span class="player-name">{{ response.playerName }}</span>
+            <span class="response-status">
+              {{ response.accepted ? '✅ Acepta' : '❌ Rechaza' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de esperando respuestas (para el host) -->
+  <div 
+    *ngIf="showWaitingModal" 
+    class="modal-overlay"
+  >
+    <div class="modal-content waiting-modal">
+      <!-- Estado de espera -->
+      <div *ngIf="rematchStatus === 'waiting'">
+        <h3>🕰️ Esperando Respuestas</h3>
+        
+        <div class="waiting-info">
+          <p>Revancha propuesta. Esperando que los jugadores respondan...</p>
+        </div>
+      </div>
+
+      <!-- Estado de éxito -->
+      <div *ngIf="rematchStatus === 'success'" class="success-state">
+        <h3>🎉 ¡Éxito!</h3>
+        
+        <div class="success-info">
+          <p>¡Todos los jugadores aceptaron la revancha!</p>
+          <p>🚀 Redirigiendo a la nueva partida...</p>
+        </div>
+      </div>
+
+      <!-- Estado de fallo -->
+      <div *ngIf="rematchStatus === 'failed'" class="failed-state">
+        <h3>❌ Revancha Cancelada</h3>
+        
+        <div class="failed-info">
+          <p>Un jugador rechazó la propuesta de revancha.</p>
+          <p>El modal se cerrará automáticamente...</p>
+        </div>
+      </div>
+
+      <div class="rematch-status">
+        <h4>Estado actual:</h4>
+        <div class="player-responses">
+          <div 
+            *ngFor="let response of rematchResponses" 
+            class="player-response"
+            [class.accepted]="response.accepted"
+            [class.declined]="!response.accepted && response.responded"
+            [class.pending]="!response.responded"
+          >
+            <span class="player-name">{{ response.playerName }}</span>
+            <span class="response-status">
+              <span *ngIf="response.accepted">✅ Acepta</span>
+              <span *ngIf="!response.accepted && response.responded">❌ Rechaza</span>
+              <span *ngIf="!response.responded">⏳ Esperando...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="waiting-actions">
+        <button (click)="cancelRematch()" class="cancel-btn">
+          Cancelar Revancha
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

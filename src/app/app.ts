@@ -19,29 +19,21 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    console.log('App initialized, checking authentication...');
-    
-    // Inicializar autenticación al cargar la app
     this.authService.initializeAuth().subscribe({
       next: (user) => {
         if (user) {
-          console.log('User authenticated on app start:', user);
         } else {
-          console.log('No authenticated user on app start');
         }
       },
       error: (error) => {
-        console.error('Error initializing auth:', error);
       }
     });
 
     // Auto-conectar socket si el usuario está autenticado
     this.authService.currentUser$.subscribe(user => {
       if (user) {
-        console.log('User authenticated, connecting socket...');
         this.socketService.connect();
       } else {
-        console.log('User not authenticated, disconnecting socket...');
         this.socketService.disconnect();
       }
     });

@@ -13,15 +13,14 @@ export class AuthInterceptor implements HttpInterceptor {
     
     // Solo agregar el header de autorización si tenemos un token y no es una request de login/register
     if (token && !this.isAuthRequest(req)) {
-      console.log('Adding authorization header to request:', req.url);
       const authReq = req.clone({
         setHeaders: {
+          'ngrok-skip-browser-warning': 'true',
           Authorization: `Bearer ${token}`
         }
       });
       return next.handle(authReq);
     } else {
-      console.log('No token or auth request, proceeding without auth header:', req.url);
     }
     
     return next.handle(req);
