@@ -1,0 +1,112 @@
+<div class="lobby-container">
+      <header class="lobby-header">
+        <h1>🃏 Blackjack Lobby</h1>
+        <div class="user-info">
+          <span>Bienvenido, {{ currentUser?.fullName }}!</span>
+          <button (click)="logout()" class="logout-btn">Salir</button>
+        </div>
+      </header>
+
+      <div class="lobby-content">
+        <div class="actions-section">
+          <button (click)="showCreateGameModal()" class="create-game-btn" [disabled]="isLoading">
+            {{ isLoading ? 'Creando...' : 'Crear Nuevo Juego' }}
+          </button>
+          <button (click)="refreshGames()" class="refresh-btn" [disabled]="isLoading">
+            🔄 Actualizar
+          </button>
+        </div>
+
+        <div class="games-section">
+          <h2>Juegos Disponibles</h2>
+          
+          <div *ngIf="isLoading" class="loading">
+            Cargando juegos...
+          </div>
+
+          <div *ngIf="!isLoading && availableGames.length === 0" class="no-games">
+            No hay juegos disponibles. ¡Crea uno nuevo!
+          </div>
+
+          <div class="games-grid" *ngIf="!isLoading && availableGames.length > 0">
+            <div 
+              *ngFor="let game of availableGames" 
+              class="game-card"
+              [class.full]="game.players && game.players.length >= game.maxPlayers"
+            >
+              <div class="game-header">
+                <h3>{{ game.hostName || ('Juego #' + game.id) }}</h3>
+                <span class="game-status">{{ getGameStatusText(game) }}</span>
+              </div>
+              
+              <div class="game-info">
+                <p><strong>Anfitrión:</strong> {{ getHostName(game) }}</p>
+                <p><strong>Jugadores:</strong> {{ getNonHostPlayers(game) }} / {{ game.maxPlayers }}</p>
+                <p><strong>Creado:</strong> {{ formatDate(game.createdAt) }}</p>
+              </div>
+
+              <div class="players-list" *ngIf="game.players && game.players.length > 0">
+                <h4>Jugadores:</h4>
+                <ul>
+                  <li *ngFor="let player of game.players">
+                    {{ player.user?.username }}
+                    <span *ngIf="player.isHost" class="host-badge">HOST</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button 
+                (click)="joinGame(game.id)" 
+                class="join-btn"
+                [disabled]="isJoining || getNonHostPlayers(game) >= game.maxPlayers"
+              >
+                {{ getJoinButtonText() }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="error-message" *ngIf="errorMessage">
+          {{ errorMessage }}
+        </div>
+      </div>
+
+      <!-- Modal para crear juego -->
+      <div *ngIf="showCreateModal" class="modal-overlay" (click)="hideCreateGameModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <h3>Crear Nueva Partida</h3>
+          
+          <div class="form-group">
+            <label for="gameName">Nombre de la partida:</label>
+            <input 
+              type="text" 
+              id="gameName" 
+              [(ngModel)]="gameName" 
+              class="text-input"
+              placeholder="Ej: Partida de {{ currentUser?.fullName }}"
+              maxlength="50"
+            >
+          </div>
+
+          <div class="form-group">
+            <label>Número máximo de jugadores:</label>
+            <input 
+              type="number" 
+              [(ngModel)]="selectedMaxPlayers" 
+              class="number-input"
+              min="3"
+              max="6"
+              placeholder="Ej: 6"
+            >
+            <small class="help-text">Entre 3 y 6 jugadores (sin contar al anfitrión). Total: 4-7 jugadores.</small>
+          </div>
+
+          <div class="modal-actions">
+            <button (click)="createGame()" class="create-btn" [disabled]="isLoading || !gameName.trim() || selectedMaxPlayers < 3 || selectedMaxPlayers > 6">
+              {{ isLoading ? 'Creando...' : 'Crear Partida' }}
+            </button>
+            <button (click)="hideCreateGameModal()" class="cancel-btn">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>

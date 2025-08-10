@@ -693,3 +693,328 @@
   font-size: 1.2rem;
   padding: 3rem;
 }
+
+/* ================================================
+   ESTILOS PARA MODALES DE REVANCHA
+   ================================================ */
+
+/* Overlay del modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Contenido base del modal */
+.modal-content {
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border-radius: 20px;
+  padding: 2rem;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  transform: scale(0.9);
+  animation: modalAppear 0.3s ease-out forwards;
+}
+
+@keyframes modalAppear {
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Modal específico de revancha propuesta */
+.rematch-modal {
+  border: 3px solid #4CAF50;
+}
+
+.rematch-modal h3 {
+  color: #2E7D32;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Información de la revancha */
+.rematch-info {
+  background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #4CAF50;
+}
+
+.rematch-info p {
+  margin: 0.5rem 0;
+  color: #2E7D32;
+  font-weight: 500;
+}
+
+.new-game-details {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.new-game-details p {
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+  color: #1B5E20;
+}
+
+/* Pregunta de revancha */
+.rematch-question {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.rematch-question p {
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* Botones de acción */
+.rematch-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.accept-btn, .decline-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.accept-btn {
+  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  color: white;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.accept-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.decline-btn {
+  background: linear-gradient(135deg, #F44336, #EF5350);
+  color: white;
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+.decline-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+.accept-btn:disabled, .decline-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Modal de espera */
+.waiting-modal {
+  border: 3px solid #FF9800;
+  text-align: center;
+}
+
+.waiting-modal h3 {
+  color: #F57C00;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+}
+
+/* Estados específicos del modal de espera */
+.success-state {
+  animation: successPulse 1s ease-in-out;
+}
+
+@keyframes successPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.success-state h3 {
+  color: #4CAF50 !important;
+}
+
+.success-info {
+  background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.failed-state h3 {
+  color: #F44336 !important;
+}
+
+.failed-info {
+  background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.waiting-info {
+  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+/* Estado de respuestas */
+.rematch-status {
+  margin-top: 1.5rem;
+}
+
+.rematch-status h4 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.player-responses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.player-response {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  border-left: 4px solid #ddd;
+  transition: all 0.3s ease;
+}
+
+.player-response.accepted {
+  background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+  border-left-color: #4CAF50;
+  color: #2E7D32;
+}
+
+.player-response.declined {
+  background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+  border-left-color: #F44336;
+  color: #C62828;
+}
+
+.player-response.pending {
+  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+  border-left-color: #FF9800;
+  color: #E65100;
+  animation: pendingPulse 2s ease-in-out infinite;
+}
+
+@keyframes pendingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.response-status {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Botones de acción para modal de espera */
+.waiting-actions {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.cancel-btn {
+  background: linear-gradient(135deg, #757575, #9E9E9E);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(117, 117, 117, 0.3);
+}
+
+.cancel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(117, 117, 117, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-content {
+    margin: 1rem;
+    min-width: auto;
+    max-width: calc(100vw - 2rem);
+    padding: 1.5rem;
+  }
+  
+  .rematch-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .accept-btn, .decline-btn {
+    width: 100%;
+  }
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  border-radius: 22px;
+  z-index: -1;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}

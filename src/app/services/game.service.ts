@@ -46,14 +46,14 @@ export class GameService {
     return this.http.post(`${this.apiUrl}/games/${gameId}/start`, { hostPlayerId });
   }
 
-  // Solicitar una carta (solicitar al host)
-  requestCard(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/request-card`, {});
+  // Solicitar una carta (solicitar al host) - REQUIERE gameId específico
+  requestCard(gameId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/request-card`, { gameId });
   }
 
-  // Plantarse (no pedir más cartas)
-  stand(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/stand`, {});
+  // Plantarse (no pedir más cartas) - REQUIERE gameId específico
+  stand(gameId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/stand`, { gameId });
   }
 
   // Dar carta a un jugador específico (para el host)
@@ -81,9 +81,9 @@ export class GameService {
     return this.http.post(`${this.apiUrl}/games/${gameId}/finish`, {});
   }
 
-  // Salir del juego
-  leaveGame(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/leave`, {});
+  // Salir del juego - REQUIERE gameId específico
+  leaveGame(gameId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/leave`, { gameId });
   }
 
   // Revelar cartas y finalizar
