@@ -317,10 +317,8 @@
     </div>
   </div>
 
-  <!-- Loading state -->
   <div class="loading" *ngIf="!gameInfo">Cargando juego...</div>
 
-  <!-- Modal de revancha propuesta -->
   <div 
     *ngIf="showRematchModal" 
     class="modal-overlay" 
@@ -331,10 +329,6 @@
       
       <div class="rematch-info">
         <p><strong>{{ rematchData?.hostName || 'El anfitríon' }}</strong> ha propuesto una revancha.</p>
-        <div class="new-game-details">
-          <p><strong>Nueva partida:</strong> {{ rematchData?.newGame?.hostName }}</p>
-          <p><strong>Máx jugadores:</strong> {{ rematchData?.newGame?.maxPlayers }}</p>
-        </div>
       </div>
 
       <div class="rematch-question">
