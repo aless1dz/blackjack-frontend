@@ -68,17 +68,14 @@ export class LobbyComponent implements OnInit, OnDestroy {
       this.loadAvailableGames();
     });
 
-    // Escuchar actualizaciones de juegos
     const gameUpdateSub = this.socketService.on('chisme:gameUpdate').subscribe(() => {
       this.loadAvailableGames();
     });
 
-    // Escuchar cuando un jugador se une a un juego
     const playerJoinedSub = this.socketService.on('chisme:playerJoined').subscribe(() => {
       this.loadAvailableGames();
     });
 
-    // Escuchar cuando un jugador deja un juego
     const playerLeftSub = this.socketService.on('chisme:playerLeft').subscribe(() => {
       this.loadAvailableGames();
     });

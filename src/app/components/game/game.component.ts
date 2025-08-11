@@ -135,12 +135,10 @@ export class GameComponent implements OnInit, OnDestroy {
       'chisme:gameFinished'
     ];
 
-    // ✅ NUEVO: Evento especial para cuando la partida se termina por abandono
     const gameEndedByLeaveSub = this.socketService.on('chisme:gameEndedByLeave').subscribe({
       next: (data) => {
         console.log('🛑 Partida terminada por abandono:', data);
         this.ngZone.run(() => {
-          // Mostrar mensaje y redirigir al lobby
           alert(data.message || 'La partida ha sido cancelada porque alguien abandonó');
           this.router.navigate(['/lobby']);
         });
@@ -160,10 +158,10 @@ export class GameComponent implements OnInit, OnDestroy {
         catchError((error) => {
           return of(null);
         }),
-        retry({ count: 3, delay: 1000 }) // Reintentar hasta 3 veces con 1s de delay
+        retry({ count: 3, delay: 1000 }) 
       ).subscribe({
         next: (data) => {
-          if (data !== null) { // Solo procesar si no es el valor null del catchError
+          if (data !== null) { 
 
             this.ngZone.run(() => {
               this.loadGameInfo();
@@ -180,7 +178,6 @@ export class GameComponent implements OnInit, OnDestroy {
 
     const newGameSub = this.socketService.on('chisme:newGameCreated').subscribe({
       next: (data) => {
-        // Solo redirigir si NO estamos en proceso de revancha
         if (data?.newGame?.id && !this.showWaitingModal && !this.showRematchModal) {
           this.ngZone.run(() => {
             this.router.navigate(['/game', data.newGame.id]);
@@ -208,7 +205,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
         if (gameInfo.winnerId && gameInfo.players) {
           const winnerPlayer = gameInfo.players.find(
-            (p: any) => p.id === gameInfo.winnerId
+            (p: any) => p.userId === gameInfo.winnerId
           );
           if (winnerPlayer) {
             this.gameInfo.winner = winnerPlayer;
@@ -227,10 +224,8 @@ export class GameComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ✅ CAMBIO 9: Método para debug (temporal)
   debugSocketState() {
     
-    // ✅ Obtener el valor actual del Observable
     this.socketService.isConnected$.subscribe(connected => {
       console.log('Socket connected:', connected);
     }).unsubscribe();
@@ -241,7 +236,6 @@ export class GameComponent implements OnInit, OnDestroy {
     console.log('========================');
   }
 
-  // ✅ Resto de métodos permanecen igual
   get isHost(): boolean {
     if (!this.gameInfo?.players || !this.currentUser) return false;
     return this.gameInfo.players.some(
@@ -264,22 +258,18 @@ export class GameComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    // Si eres el host, puedes ver todas las cartas siempre
     if (this.isHost) {
       return false;
     }
 
-    // Siempre puedes ver tus propias cartas
     if (this.isCurrentUser(player)) {
       return false;
     }
 
-    // Las cartas del dealer se ocultan hasta que el juego termine
     if (player.isHost) {
-      return true; // Ocultar cartas del dealer hasta el final
+      return true;
     }
 
-    // Ocultar cartas de otros jugadores durante el juego
     return true;
   }
 
@@ -359,7 +349,6 @@ export class GameComponent implements OnInit, OnDestroy {
     const points = player.totalPoints || player.points || 0;
     const cardCount = this.getPlayerCards(player).length;
 
-    // ✅ Cuando el juego termine, mostrar información completa para todos
     if (this.gameInfo?.status === 'finished') {
       if (points > 21) return 'Pasado (' + points + ')';
       if (points === 21 && cardCount === 2) return 'Blackjack!';
@@ -367,14 +356,12 @@ export class GameComponent implements OnInit, OnDestroy {
       return 'Terminado (' + points + ')';
     }
 
-    // Durante el juego, mostrar información limitada para otros jugadores
     if (!this.isHost && !this.isCurrentUser(player)) {
       if (player.isStand || player.isStanding) return 'Plantado';
       if (player.isFinished) return 'Terminado';
       return 'Jugando';
     }
 
-    // Para el host o el propio jugador, siempre mostrar información completa
     if (points > 21) return 'Pasado';
     if (points === 21 && cardCount === 2) return 'Blackjack!';
     if (player.isStand || player.isStanding) return 'Plantado';
@@ -428,7 +415,6 @@ export class GameComponent implements OnInit, OnDestroy {
     this.gameService.startGame(this.gameId, hostPlayer.id).subscribe({
       next: (response) => {
         this.isLoading = false;
-        // ✅ No llamar loadGameInfo aquí, se hará automáticamente por el socket
       },
       error: (error: any) => {
         this.errorMessage = error.error?.message || 'Error al iniciar el juego';
@@ -443,12 +429,10 @@ export class GameComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // ✅ Usar gameId específico para evitar confusión entre partidas
     this.gameService.requestCard(this.gameId).subscribe({
       next: (response) => {
         this.isLoading = false;
         console.log(`🃏 Carta solicitada en partida ${this.gameId}`);
-        // ✅ No llamar loadGameInfo aquí, se hará automáticamente por el socket
       },
       error: (error: any) => {
         console.error(`❌ Error al solicitar carta en partida ${this.gameId}:`, error);
@@ -464,12 +448,10 @@ export class GameComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // ✅ Usar gameId específico para evitar confusión entre partidas
     this.gameService.stand(this.gameId).subscribe({
       next: () => {
         this.isLoading = false;
         console.log(`🛁 Plantado en partida ${this.gameId}`);
-        // ✅ No llamar loadGameInfo aquí, se hará automáticamente por el socket
       },
       error: (error: any) => {
         console.error(`❌ Error al plantarse en partida ${this.gameId}:`, error);
@@ -486,7 +468,6 @@ export class GameComponent implements OnInit, OnDestroy {
     this.gameService.dealCardToPlayer(playerId).subscribe({
       next: () => {
         this.isLoading = false;
-        // ✅ No llamar loadGameInfo aquí, se hará automáticamente por el socket
       },
       error: (error: any) => {
         this.errorMessage = error.error?.message || 'Error al dar carta';
@@ -502,7 +483,6 @@ export class GameComponent implements OnInit, OnDestroy {
     this.gameService.standPlayer(playerId).subscribe({
       next: () => {
         this.isLoading = false;
-        // ✅ No llamar loadGameInfo aquí, se hará automáticamente por el socket
       },
       error: (error: any) => {
         this.errorMessage = error.error?.message || 'Error al plantar jugador';
@@ -539,7 +519,6 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   leaveGame() {
-    // ✅ Usar gameId específico para evitar confusión entre partidas
     this.gameService.leaveGame(this.gameId).subscribe({
       next: () => {
         console.log(`🚪 Saliendo de partida ${this.gameId}`);
@@ -566,9 +545,6 @@ export class GameComponent implements OnInit, OnDestroy {
     ).length;
   }
 
-  // ✅ ================================
-  // ✅     MÉTODOS DE REVANCHA
-  // ✅ ================================
 
   private setupRematchListeners() {
     const rematchProposedSub = this.socketService.on('chisme:rematchProposed').subscribe({
@@ -581,7 +557,6 @@ export class GameComponent implements OnInit, OnDestroy {
       error: (err) => console.error('Error en rematchProposed:', err),
     });
 
-    // Listener para respuestas de revancha
     const rematchResponseSub = this.socketService.on('chisme:rematchResponse').subscribe({
       next: (data) => {
         console.log('💬 Respuesta de revancha recibida:', data);
@@ -592,7 +567,6 @@ export class GameComponent implements OnInit, OnDestroy {
       error: (err) => console.error('Error en rematchResponse:', err),
     });
 
-    // ✅ NUEVO: Listener para cuando se cancela la revancha
     const rematchCancelledSub = this.socketService.on('chisme:rematchCancelled').subscribe({
       next: (data) => {
         console.log('❌ Revancha cancelada:', data);
@@ -607,12 +581,28 @@ export class GameComponent implements OnInit, OnDestroy {
       error: (err) => console.error('Error en rematchCancelled:', err),
     });
 
-    // Listener adicional para cuando se crea un nuevo juego (revancha exitosa)
+    const allPlayersAcceptedRematchSub = this.socketService.on('chisme:allPlayersAcceptedRematch').subscribe({
+      next: (data) => {
+        console.log('🎉 TODOS los jugadores aceptaron la revancha:', data);
+        this.ngZone.run(() => {
+          if (data?.newGameId) {
+            console.log('🚀 Redirigiendo TODOS a la nueva partida:', data.newGameId);
+            // Cerrar modales y mostrar mensaje de éxito
+            this.rematchStatus = 'success';
+            
+            setTimeout(() => {
+              this.navigateToNewGame(data.newGameId);
+            }, 2000);
+          }
+        });
+      },
+      error: (err) => console.error('Error en allPlayersAcceptedRematch:', err),
+    });
+
     const newGameFromRematchSub = this.socketService.on('chisme:newGameCreated').subscribe({
       next: (data) => {
         console.log('🎮 Nuevo juego creado desde revancha:', data);
         if (data?.newGame?.id && this.showWaitingModal) {
-          // Solo procesar si estamos esperando una revancha
           console.log('🚀 Redirigiendo a la nueva partida de revancha:', data.newGame.id);
           this.ngZone.run(() => {
             setTimeout(() => {
@@ -624,7 +614,7 @@ export class GameComponent implements OnInit, OnDestroy {
       error: (err) => console.error('Error en newGameCreated (revancha):', err),
     });
 
-    this.subscriptions.push(rematchProposedSub, rematchResponseSub, rematchCancelledSub, newGameFromRematchSub);
+    this.subscriptions.push(rematchProposedSub, rematchResponseSub, rematchCancelledSub, allPlayersAcceptedRematchSub, newGameFromRematchSub);
   }
 
   private handleRematchProposed(data: any) {
@@ -642,7 +632,6 @@ export class GameComponent implements OnInit, OnDestroy {
       this.rematchData = data.rematch;
       console.log('📄 [DEBUG] No-Host - rematchData:', JSON.stringify(this.rematchData, null, 2));
       
-      // Encontrar tu ID de jugador
       if (this.gameInfo?.players && this.currentUser) {
         const currentPlayer = this.gameInfo.players.find(
           (p: any) => p.userId === this.currentUser!.id
@@ -661,27 +650,19 @@ export class GameComponent implements OnInit, OnDestroy {
     console.log('📝 [DEBUG] result:', JSON.stringify(result, null, 2));
     console.log('📝 [DEBUG] rematchResponses antes:', this.rematchResponses);
 
-    // Verificar si hay un newGameId en el resultado Y es MI respuesta
     if (accepted && result?.newGameId && playerId === this.currentPlayerId) {
-      console.log('🎆 [DEBUG] ¡YO acepté y hay newGameId!', result.newGameId);
-      console.log('🎆 [DEBUG] Mi playerId:', this.currentPlayerId, 'Respuesta de:', playerId);
-      // Si no eres el host, redirigir inmediatamente
       if (!this.isHost) {
-        console.log('🚀 [DEBUG] No-Host: Redirigiendo inmediatamente a:', result.newGameId);
         setTimeout(() => {
           this.navigateToNewGame(result.newGameId);
         }, 1000);
-        return; // Salir temprano para no procesar lógica del host
+        return; 
       }
     } else if (accepted && result?.newGameId && playerId !== this.currentPlayerId) {
-      console.log('📞 [DEBUG] Otro usuario aceptó:', playerId, '(yo soy:', this.currentPlayerId, ')');
     }
 
-    // Actualizar la respuesta en la lista (solo para host)
     const responseIndex = this.rematchResponses.findIndex(
       (r) => r.playerId === playerId
     );
-    console.log('📝 [DEBUG] responseIndex encontrado:', responseIndex);
 
     if (responseIndex !== -1) {
       this.rematchResponses[responseIndex] = {
@@ -689,10 +670,8 @@ export class GameComponent implements OnInit, OnDestroy {
         accepted,
         responded: true,
       };
-      console.log('📝 [DEBUG] rematchResponses después:', this.rematchResponses);
     }
 
-    // Verificar si todos han respondido y aceptado (solo para host)
     this.checkAllRematchResponses();
   }
 
@@ -715,36 +694,21 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('🔍 Verificando estado de respuestas:', {
-      responses: this.rematchResponses,
-      totalResponses: this.rematchResponses.length
-    });
-
     const allResponded = this.rematchResponses.every((r) => r.responded);
     const allAccepted = this.rematchResponses.every((r) => r.accepted);
     const anyRejected = this.rematchResponses.some((r) => r.responded && !r.accepted);
 
-    console.log('📊 Estado actual:', {
-      allResponded,
-      allAccepted, 
-      anyRejected,
-      newGameId: this.rematchData?.newGameId
-    });
 
     if (anyRejected) {
-      // Si alguien rechazó, cancelar inmediatamente
-      console.log('❌ Revancha cancelada - alguien rechazó');
       this.rematchStatus = 'failed';
       setTimeout(() => {
         this.closeRematchModals();
       }, 3000);
     } else if (allResponded && allAccepted) {
-      // ¡Todos aceptaron! Mostrar éxito y luego redirigir
       console.log('🎉 ¡Todos aceptaron la revancha! Redirigiendo a:', this.rematchData?.newGameId);
       this.rematchStatus = 'success';
       
       if (this.rematchData?.newGameId) {
-        // Mostrar mensaje de éxito primero, luego navegar con mejor manejo
         setTimeout(() => {
           console.log('🚀 Navegando a la nueva partida...');
           this.navigateToNewGame(this.rematchData.newGameId);
@@ -766,14 +730,11 @@ export class GameComponent implements OnInit, OnDestroy {
   private navigateToNewGame(newGameId: number) {
     console.log('🎯 Iniciando navegación a nueva partida:', newGameId);
     
-    // 1. Limpiar estado actual
     this.closeRematchModals();
     
-    // 2. Salir de la sala actual
     console.log('🚪 Saliendo de sala actual:', this.gameId);
     this.socketService.leaveGameRoom(this.gameId);
     
-    // 3. Navegar a la nueva partida
     this.router.navigate(['/game', newGameId]).then(success => {
       if (success) {
         console.log('✅ Navegación exitosa a partida:', newGameId);
@@ -797,11 +758,9 @@ export class GameComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         if (accepted) {
           console.log('✅ Revancha aceptada, esperando otros jugadores...');
-          // Cambiar a modo espera
           this.showRematchModal = false;
           this.showWaitingModal = true;
           this.initializeRematchResponses();
-          // Marcar tu respuesta como aceptada
           const myResponseIndex = this.rematchResponses.findIndex(
             (r) => r.playerId === this.currentPlayerId
           );
@@ -822,7 +781,6 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   closeRematchModal() {
-    // Solo permite cerrar si no es obligatorio responder
     this.showRematchModal = false;
   }
 
@@ -834,8 +792,6 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   cancelRematch() {
-    // Método para que el host cancele la revancha
     this.closeRematchModals();
-    console.log('Revancha cancelada por el host');
   }
 }
