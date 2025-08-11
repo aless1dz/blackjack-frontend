@@ -253,7 +253,6 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   shouldHideCard(player: Player, card: any): boolean {
-    // ✅ Si el juego ha terminado, mostrar todas las cartas
     if (this.gameInfo?.status === 'finished') {
       return false;
     }
@@ -571,7 +570,11 @@ export class GameComponent implements OnInit, OnDestroy {
       next: (data) => {
         console.log('❌ Revancha cancelada:', data);
         this.ngZone.run(() => {
-          // Cerrar modales y mostrar mensaje
+          if (data.gameId && Number(data.gameId) !== Number(this.gameId)) {
+            console.log(`🚫 [DEBUG] Ignorando rematch cancelled - no es para esta partida. Evento gameId: ${data.gameId} (${typeof data.gameId}), Mi gameId: ${this.gameId} (${typeof this.gameId})`);
+            return;
+          }
+          
           this.closeRematchModals();
           alert(data.message || 'La revancha ha sido cancelada');
           // Redirigir al lobby
@@ -585,9 +588,9 @@ export class GameComponent implements OnInit, OnDestroy {
       next: (data) => {
         console.log('🎉 TODOS los jugadores aceptaron la revancha:', data);
         this.ngZone.run(() => {
+          
           if (data?.newGameId) {
             console.log('🚀 Redirigiendo TODOS a la nueva partida:', data.newGameId);
-            // Cerrar modales y mostrar mensaje de éxito
             this.rematchStatus = 'success';
             
             setTimeout(() => {
@@ -621,6 +624,14 @@ export class GameComponent implements OnInit, OnDestroy {
     console.log('📄 [DEBUG] Datos de revancha propuesta:', JSON.stringify(data, null, 2));
     console.log('📄 [DEBUG] ¿Eres host?', this.isHost);
     
+    const rematchGameId = data.rematch?.originalGameId;
+    if (rematchGameId && Number(rematchGameId) !== Number(this.gameId)) {
+      console.log(`🚫 [DEBUG] Ignorando revancha - no es para esta partida. Revancha gameId: ${rematchGameId} (${typeof rematchGameId}), Mi gameId: ${this.gameId} (${typeof this.gameId})`);
+      return;
+    }
+    
+    console.log('✅ [DEBUG] Revancha es para MI partida, procesando...');
+    
     if (this.isHost) {
       this.showWaitingModal = true;
       this.rematchData = data.rematch;
@@ -645,20 +656,15 @@ export class GameComponent implements OnInit, OnDestroy {
 
   private handleRematchResponse(data: any) {
     console.log('📝 [DEBUG] Respuesta de revancha completa:', JSON.stringify(data, null, 2));
-    const { playerId, accepted, result } = data;
-    console.log('📝 [DEBUG] playerId:', playerId, 'accepted:', accepted);
-    console.log('📝 [DEBUG] result:', JSON.stringify(result, null, 2));
-    console.log('📝 [DEBUG] rematchResponses antes:', this.rematchResponses);
-
-    if (accepted && result?.newGameId && playerId === this.currentPlayerId) {
-      if (!this.isHost) {
-        setTimeout(() => {
-          this.navigateToNewGame(result.newGameId);
-        }, 1000);
-        return; 
-      }
-    } else if (accepted && result?.newGameId && playerId !== this.currentPlayerId) {
+    
+    if (data.gameId && Number(data.gameId) !== Number(this.gameId)) {
+      console.log(`🚫 [DEBUG] Ignorando rematch response - no es para esta partida. Evento gameId: ${data.gameId} (${typeof data.gameId}), Mi gameId: ${this.gameId} (${typeof this.gameId})`);
+      return;
     }
+    
+    const { playerId, accepted, playerName } = data;
+    console.log('📝 [DEBUG] playerId:', playerId, 'accepted:', accepted, 'playerName:', playerName);
+    console.log('📝 [DEBUG] rematchResponses antes:', this.rematchResponses);
 
     const responseIndex = this.rematchResponses.findIndex(
       (r) => r.playerId === playerId
@@ -672,7 +678,9 @@ export class GameComponent implements OnInit, OnDestroy {
       };
     }
 
-    this.checkAllRematchResponses();
+    if (this.isHost) {
+      this.checkAllRematchResponsesAndCreateGame();
+    }
   }
 
   private initializeRematchResponses() {
@@ -686,6 +694,62 @@ export class GameComponent implements OnInit, OnDestroy {
       accepted: false,
       responded: false,
     }));
+  }
+
+  private checkAllRematchResponsesAndCreateGame() {
+    if (this.rematchResponses.length === 0) {
+      console.log('⚠️ No hay respuestas de revancha para verificar');
+      return;
+    }
+
+    const allResponded = this.rematchResponses.every((r) => r.responded);
+    const allAccepted = this.rematchResponses.every((r) => r.accepted);
+    const anyRejected = this.rematchResponses.some((r) => r.responded && !r.accepted);
+
+    console.log('🔍 [DEBUG] Estado de respuestas:', {
+      allResponded,
+      allAccepted,
+      anyRejected,
+      responses: this.rematchResponses
+    });
+
+    if (anyRejected) {
+      this.rematchStatus = 'failed';
+      setTimeout(() => {
+        this.closeRematchModals();
+      }, 3000);
+      return;
+    }
+
+    if (allResponded && allAccepted) {
+      console.log('🎉 ¡Todos aceptaron la revancha! Creando nueva partida...');
+      
+      const acceptedPlayerIds = this.rematchResponses
+        .filter(r => r.accepted)
+        .map(r => r.playerId);
+      
+      console.log('📋 IDs de jugadores que aceptaron:', acceptedPlayerIds);
+      
+      this.gameService.createRematchWhenAllAccepted(this.gameId, acceptedPlayerIds).subscribe({
+        next: (result) => {
+          console.log('🎮 Resultado de creación de partida:', result);
+          if (result.allAccepted) {
+            this.rematchStatus = 'success';
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error al crear partida de revancha:', error);
+          this.errorMessage = 'Error al crear la nueva partida de revancha';
+          this.rematchStatus = 'failed';
+        }
+      });
+    } else {
+      console.log('⏳ Esperando más respuestas...', {
+        respondedCount: this.rematchResponses.filter(r => r.responded).length,
+        totalCount: this.rematchResponses.length
+      });
+      this.rematchStatus = 'waiting';
+    }
   }
 
   private checkAllRematchResponses() {

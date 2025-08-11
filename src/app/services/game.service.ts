@@ -104,6 +104,13 @@ export class GameService {
     });
   }
 
+  // Crear partida solo cuando todos hayan aceptado la revancha
+  createRematchWhenAllAccepted(gameId: number, acceptedPlayerIds: number[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/${gameId}/create-rematch-when-all-accepted`, {
+      acceptedPlayerIds
+    });
+  }
+
   // Crear revancha
   createRematch(originalGameId: number, acceptedPlayers: number[]): Observable<any> {
     return this.http.post(`${this.apiUrl}/games/${originalGameId}/create-rematch`, { 

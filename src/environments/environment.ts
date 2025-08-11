@@ -1,4 +1,4 @@
 export const environment = {
-  apiUrl : 'http://localhost:3333/api',
-  apiUrlSockets: 'http://localhost:3333'
+  apiUrl : 'https://650a1d5c79a8.ngrok-free.app/api',
+  apiUrlSockets: 'https://650a1d5c79a8.ngrok-free.app'
 };
