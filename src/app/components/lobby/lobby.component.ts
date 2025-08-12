@@ -64,23 +64,38 @@ export class LobbyComponent implements OnInit, OnDestroy {
   }
 
   setupSocketListeners() {
+    // ✅ Solo notificaciones de eventos, sin datos - recargar lista de juegos
     const newGameSub = this.socketService.on('chisme:newGameCreated').subscribe(() => {
+      console.log('🎮 Nuevo juego creado - refrescando lista');
       this.loadAvailableGames();
     });
 
     const gameUpdateSub = this.socketService.on('chisme:gameUpdate').subscribe(() => {
+      console.log('🔄 Actualización de juego - refrescando lista');
       this.loadAvailableGames();
     });
 
     const playerJoinedSub = this.socketService.on('chisme:playerJoined').subscribe(() => {
+      console.log('👤 Jugador se unió - refrescando lista');
       this.loadAvailableGames();
     });
 
     const playerLeftSub = this.socketService.on('chisme:playerLeft').subscribe(() => {
+      console.log('🚪 Jugador salió - refrescando lista');
       this.loadAvailableGames();
     });
 
-    this.subscriptions.push(newGameSub, gameUpdateSub, playerJoinedSub, playerLeftSub);
+    const gameStartedSub = this.socketService.on('chisme:gameStarted').subscribe(() => {
+      console.log('🎮 Juego iniciado - refrescando lista');
+      this.loadAvailableGames();
+    });
+
+    const gameFinishedSub = this.socketService.on('chisme:gameFinished').subscribe(() => {
+      console.log('🏁 Juego terminado - refrescando lista');
+      this.loadAvailableGames();
+    });
+
+    this.subscriptions.push(newGameSub, gameUpdateSub, playerJoinedSub, playerLeftSub, gameStartedSub, gameFinishedSub);
   }
 
   loadAvailableGames() {

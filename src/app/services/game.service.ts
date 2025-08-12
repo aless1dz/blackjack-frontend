@@ -1,49 +1,47 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
-import { 
-  Game, 
-  GameStatus, 
-  CreateGameRequest, 
-  Player, 
-  RematchResponse, 
-  GameInfo 
+import { Observable, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import {
+  Game,
+  GameStatus,
+  CreateGameRequest,
+  Player,
+  RematchResponse,
+  GameInfo,
 } from '../models/game.model';
+import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GameService {
   private apiUrl = environment.apiUrl;
-  
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private authService: AuthService) {}
 
   // Crear un nuevo juego
   createGame(data: CreateGameRequest): Observable<Game> {
     return this.http.post<any>(`${this.apiUrl}/games`, data).pipe(
-      tap(response => console.log('Create game response:', response)),
-      map(response => {
-        // Si la respuesta tiene un wrapper, extraer el juego
+      tap((response) => console.log('Create game response:', response)),
+      map((response) => {
         if (response.game) {
           return response.game;
         }
-        // Si la respuesta es directamente el juego
         return response;
       })
     );
   }
 
-  // Unirse a un juego existente
   joinGame(gameId: number): Observable<Player> {
     return this.http.post<Player>(`${this.apiUrl}/games/${gameId}/join`, {});
   }
 
-  // Iniciar un juego
   startGame(gameId: number, hostPlayerId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${gameId}/start`, { hostPlayerId });
+    return this.http.post(`${this.apiUrl}/games/${gameId}/start`, {
+      hostPlayerId,
+    });
   }
 
   // Solicitar una carta (solicitar al host) - REQUIERE gameId específico
@@ -88,38 +86,68 @@ export class GameService {
 
   // Revelar cartas y finalizar
   revealAndFinish(gameId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${gameId}/reveal-and-finish`, {});
+    return this.http.post(
+      `${this.apiUrl}/games/${gameId}/reveal-and-finish`,
+      {}
+    );
   }
 
   // Proponer revancha
   proposeRematch(gameId: number, hostPlayerId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${gameId}/propose-rematch`, { hostPlayerId });
+    return this.http.post(`${this.apiUrl}/games/${gameId}/propose-rematch`, {
+      hostPlayerId,
+    });
   }
 
   // Responder a revancha
-  respondToRematch(gameId: number, playerId: number, accepted: boolean): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${gameId}/respond-rematch`, { 
-      playerId, 
-      accepted 
+  respondToRematch(
+    gameId: number,
+    playerId: number,
+    accepted: boolean
+  ): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/${gameId}/respond-rematch`, {
+      playerId,
+      accepted,
     });
   }
 
-  // Crear partida solo cuando todos hayan aceptado la revancha
-  createRematchWhenAllAccepted(gameId: number, acceptedPlayerIds: number[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${gameId}/create-rematch-when-all-accepted`, {
-      acceptedPlayerIds
-    });
-  }
 
-  // Crear revancha
-  createRematch(originalGameId: number, acceptedPlayers: number[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/games/${originalGameId}/create-rematch`, { 
-      acceptedPlayers 
-    });
+  // Obtener jugadores para revancha
+  getPlayersForRematch(gameId: number): Observable<any> {
+    return this.http.get<any>(
+      `${this.apiUrl}/games/${gameId}/players-for-rematch`
+    );
   }
 
   // Listar juegos disponibles
   listAvailableGames(): Observable<Game[]> {
     return this.http.get<Game[]>(`${this.apiUrl}/games/available`);
   }
+
+  getCurrentUserId(): number {
+    const user = this.authService.getCurrentUser();
+    if (!user) return 0;
+    return user.id;
+  }
+
+
+  getRematchInfo(gameId: string): Observable<any> {
+    console.log('ℹ️ Obteniendo información de revancha para:', gameId);
+
+    // Usando la ruta existente que ya tienes
+    return this.http
+      .get<any>(`${this.apiUrl}/games/${gameId}/players-for-rematch`)
+      .pipe(
+        map((response) => ({
+          players: response.players || response.playersToNotify || [],
+          ...response,
+        })),
+        catchError((error) => {
+          console.error('❌ Error al obtener información de revancha:', error);
+          return throwError(() => error);
+        })
+      );
+  }
+
+  
 }

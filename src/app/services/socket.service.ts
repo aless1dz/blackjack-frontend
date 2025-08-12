@@ -1,4 +1,3 @@
-// services/socket.service.fixed.ts - NUEVA VERSIÓN COMPLETAMENTE CORREGIDA
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable, share, takeUntil } from 'rxjs';
@@ -16,7 +15,6 @@ export class SocketService {
   private connectionStatus = new BehaviorSubject<boolean>(false);
   public isConnected$ = this.connectionStatus.asObservable();
   
-  // ✅ Map para mantener track de observables activos
   private eventObservables = new Map<string, Observable<any>>();
   private destroy$ = new Subject<void>();
   
@@ -30,27 +28,23 @@ export class SocketService {
 
     const token = this.authService.getToken();
     if (!token) {
-      console.warn('[SOCKET] ❌ No token disponible');
       return;
     }
 
-    console.log('[SOCKET] 🔄 Iniciando conexión...');
     
-    // Limpiar socket anterior
     this.cleanup();
 
     this.socket = io(socketUrl, {
       auth: { token: token },
-      transports: ['websocket', 'polling'], // ✅ Permitir fallback a polling
-      forceNew: false, // ✅ Permitir reutilizar conexión
-      timeout: 5000, // ✅ Timeout más corto
-      reconnection: true, // ✅ Reconexión automática
-      reconnectionAttempts: 3, // ✅ Máximo 3 intentos
-      reconnectionDelay: 1000, // ✅ Delay de 1s entre intentos
+      transports: ['websocket', 'polling'], 
+      forceNew: false, 
+      timeout: 5000, 
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000, 
       autoConnect: true
     });
 
-    // Eventos básicos de conexión
     this.socket.on('connect', () => {
       console.log('[SOCKET] ✅ Socket connected successfully');
       console.log(`[SOCKET] 🆔 Socket ID: ${this.socket?.id}`);
@@ -61,7 +55,7 @@ export class SocketService {
       console.log(`[SOCKET] ❌ Desconectando socket...`);
       console.log(`[SOCKET] 📊 Razón: ${reason}`);
       this.connectionStatus.next(false);
-      this.eventObservables.clear(); // Limpiar observables
+      this.eventObservables.clear(); 
     });
 
     this.socket.on('connect_error', (error) => {
@@ -104,27 +98,20 @@ export class SocketService {
 
   joinGameRoom(gameId: number): void {
     if (this.socket?.connected) {
-      this.socket.emit('join:game', gameId); // ✅ Enviar solo el número, no objeto
-      console.log(`[SOCKET] 🚪 Joined game room: ${gameId}`);
+      this.socket.emit('join:game', gameId);
     }
   }
 
   leaveGameRoom(gameId: number): void {
     if (this.socket?.connected) {
       this.socket.emit('leaveGame', { gameId });
-      console.log(`[SOCKET] 🚪 Left game room: ${gameId}`);
     }
   }
 
-  // ✅ MÉTODO SIMPLIFICADO - manejo de eventos con mejor control de errores
   on(event: string): Observable<any> {
-    // Si ya existe un observable para este evento, devuelve el mismo
     if (this.eventObservables.has(event)) {
-      console.log(`[SOCKET] 🔄 Reutilizando observable para ${event}`);
       return this.eventObservables.get(event)!;
     }
-
-    console.log(`[SOCKET] 🆕 Creando nuevo observable para ${event}`);
 
     const observable = new Observable((observer) => {
       let handler: ((data: any) => void) | null = null;
@@ -133,40 +120,32 @@ export class SocketService {
       const setupListener = () => {
         try {
           if (!this.socket) {
-            console.log(`[SOCKET] Socket not available for event: ${event}`);
             observer.error(new Error('Socket not connected'));
             return;
           }
 
           handler = (data: any) => {
             const timestamp = new Date().toLocaleTimeString();
-            console.log(`[SOCKET] 📡 [${timestamp}] ${event}:`, data);
             observer.next(data);
           };
 
           this.socket.on(event, handler);
-          console.log(`[SOCKET] ✅ Listener configurado para ${event}`);
           
         } catch (error) {
-          console.log(`[SOCKET] ❌ Error in event ${event}:`, error);
           observer.error(error);
         }
       };
 
-      // Configurar cleanup
       cleanupFunction = () => {
         if (handler && this.socket) {
-          console.log(`[SOCKET] 🧹 Limpiando listener para ${event}`);
           this.socket.off(event, handler);
           handler = null;
         }
       };
 
-      // Intentar configurar el listener
       if (this.socket?.connected) {
         setupListener();
       } else {
-        // Esperar a la conexión
         const connectionSub = this.isConnected$.subscribe((connected) => {
           if (connected) {
             setupListener();
@@ -174,7 +153,6 @@ export class SocketService {
           }
         });
         
-        // Agregar cleanup de la suscripción
         const originalCleanup = cleanupFunction;
         cleanupFunction = () => {
           connectionSub.unsubscribe();
@@ -182,14 +160,12 @@ export class SocketService {
         };
       }
 
-      // Retornar función de cleanup
       return cleanupFunction;
     }).pipe(
-      share(), // ✅ COMPARTIR el observable entre múltiples suscriptores
-      takeUntil(this.destroy$) // ✅ Auto-cleanup cuando se destruye el servicio
+      share(), 
+      takeUntil(this.destroy$) 
     );
 
-    // Guardar el observable para reutilizar
     this.eventObservables.set(event, observable);
     return observable;
   }
@@ -207,7 +183,6 @@ export class SocketService {
     return this.socket?.connected || false;
   }
 
-  // ✅ Método de utilidad para debug
   getStatus(): any {
     return {
       connected: this.isConnected(),

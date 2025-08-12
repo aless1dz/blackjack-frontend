@@ -1,6 +1,9 @@
 <div class="game-container">
+  <div *ngIf="showAlert" class="alert-top">
+    {{ alertMessage }}
+  </div>
   <div class="game-header">
-    <h1>{{ gameInfo?.hostName || 'Partida de Blackjack' }}</h1>
+    <h1>{{ gameInfo?.hostName || "Partida de Blackjack" }}</h1>
     <div class="game-actions">
       <div
         *ngIf="isHost && getPendingCardRequests() > 0"
@@ -10,12 +13,7 @@
           >{{ getPendingCardRequests() }} solicitud(es) pendiente(s)</span
         >
       </div>
-      <button (click)="debugSocketState()" class="debug-btn" style="margin-right: 10px; background: orange; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 0.8rem;">
-        🐛 Debug Sockets
-      </button>
-      <button (click)="leaveGame()" class="leave-btn">
-        Salir del Juego
-      </button>
+      <button (click)="leaveGame()" class="leave-btn">Salir del Juego</button>
     </div>
   </div>
 
@@ -34,11 +32,9 @@
           <h4>Jugadores en sala:</h4>
           <ul>
             <li *ngFor="let player of gameInfo.players">
-              {{ player.user?.fullName || player.user?.email || 'Usuario' }}
+              {{ player.user?.fullName || player.user?.email || "Usuario" }}
               <span *ngIf="player.isHost" class="host-badge">HOST</span>
-              <span
-                *ngIf="player.userId === currentUser?.id"
-                class="you-badge"
+              <span *ngIf="player.userId === currentUser?.id" class="you-badge"
                 >TÚ</span
               >
             </li>
@@ -50,7 +46,7 @@
           class="start-btn"
           [disabled]="isLoading"
         >
-          {{ isLoading ? 'Iniciando...' : 'Iniciar Juego' }}
+          {{ isLoading ? "Iniciando..." : "Iniciar Juego" }}
         </button>
         <p
           *ngIf="isHost && (gameInfo.players?.length || 0) < 2"
@@ -82,24 +78,30 @@
                 player.user?.fullName ||
                   player.user?.email ||
                   player.name ||
-                  'Usuario'
+                  "Usuario"
               }}
               <span *ngIf="player.isHost" class="host-badge">DEALER</span>
-              <span *ngIf="isCurrentUser(player)" class="you-badge"
-                >TÚ</span
-              >
+              <span *ngIf="isCurrentUser(player)" class="you-badge">TÚ</span>
             </h3>
             <div class="player-stats">
               <!-- ✅ Lógica simplificada: mostrar puntos reales cuando termine el juego -->
-              <span 
-                class="points" 
-                *ngIf="gameInfo.status === 'finished' || isHost || isCurrentUser(player)"
+              <span
+                class="points"
+                *ngIf="
+                  gameInfo.status === 'finished' ||
+                  isHost ||
+                  isCurrentUser(player)
+                "
               >
                 Puntos: {{ player.totalPoints || player.points || 0 }}
               </span>
-              <span 
-                class="points" 
-                *ngIf="gameInfo.status !== 'finished' && !isHost && !isCurrentUser(player)"
+              <span
+                class="points"
+                *ngIf="
+                  gameInfo.status !== 'finished' &&
+                  !isHost &&
+                  !isCurrentUser(player)
+                "
               >
                 Puntos: ???
               </span>
@@ -127,10 +129,7 @@
               [class]="getCardImageClass(card)"
               [class.hidden]="shouldHideCard(player, card)"
             >
-              <div
-                class="card-content"
-                *ngIf="!shouldHideCard(player, card)"
-              >
+              <div class="card-content" *ngIf="!shouldHideCard(player, card)">
                 <div class="card-value">{{ getCardDisplay(card) }}</div>
               </div>
               <div
@@ -153,8 +152,7 @@
 
             <div
               *ngIf="
-                !getPlayerCards(player) ||
-                getPlayerCards(player).length === 0
+                !getPlayerCards(player) || getPlayerCards(player).length === 0
               "
               class="no-cards"
             >
@@ -178,17 +176,18 @@
                 class="action-btn hit-btn"
                 [disabled]="
                   isLoading ||
-                  player.isStand || player.isStanding ||
+                  player.isStand ||
+                  player.isStanding ||
                   player.isFinished ||
                   player.hasCardRequest
                 "
               >
                 {{
                   player.hasCardRequest
-                    ? 'Esperando al anfitrión...'
+                    ? "Esperando al anfitrión..."
                     : isLoading
-                    ? 'Solicitando...'
-                    : 'Pedir Carta'
+                    ? "Solicitando..."
+                    : "Pedir Carta"
                 }}
               </button>
               <button
@@ -196,11 +195,12 @@
                 class="action-btn stand-btn"
                 [disabled]="
                   isLoading ||
-                  player.isStand || player.isStanding ||
+                  player.isStand ||
+                  player.isStanding ||
                   player.isFinished
                 "
               >
-                {{ isLoading ? 'Plantándose...' : 'Plantarse' }}
+                {{ isLoading ? "Plantándose..." : "Plantarse" }}
               </button>
             </div>
 
@@ -211,9 +211,7 @@
             >
               <p class="request-message">
                 🃏
-                {{
-                  player.user?.fullName || player.user?.email || player.name
-                }}
+                {{ player.user?.fullName || player.user?.email || player.name }}
                 está pidiendo una carta
               </p>
               <button
@@ -221,7 +219,7 @@
                 class="action-btn approve-btn"
                 [disabled]="isLoading"
               >
-                {{ isLoading ? 'Dando carta...' : 'Dar Carta' }}
+                {{ isLoading ? "Dando carta..." : "Dar Carta" }}
               </button>
             </div>
 
@@ -237,14 +235,12 @@
             >
               <p class="turn-indicator">
                 Es el turno de
-                {{
-                  player.user?.fullName || player.user?.email || player.name
-                }}
+                {{ player.user?.fullName || player.user?.email || player.name }}
               </p>
               <p class="host-instruction">
                 ⏳ Esperando que
-                {{ player.user?.fullName || player.name }} solicite una
-                carta o se plante
+                {{ player.user?.fullName || player.name }} solicite una carta o
+                se plante
               </p>
             </div>
 
@@ -257,9 +253,7 @@
             >
               <p>
                 Esperando que
-                {{
-                  player.user?.fullName || player.user?.email || player.name
-                }}
+                {{ player.user?.fullName || player.user?.email || player.name }}
                 tome su turno...
               </p>
             </div>
@@ -276,7 +270,6 @@
       </div>
 
       <!-- Información del turno -->
-      
 
       <!-- Resultado del juego -->
       <div class="game-result" *ngIf="gameInfo.status === 'finished'">
@@ -306,7 +299,7 @@
             class="rematch-btn"
             [disabled]="isLoading"
           >
-            {{ isLoading ? 'Proponiendo...' : 'Proponer Revancha' }}
+            {{ isLoading ? "Proponiendo..." : "Proponer Revancha" }}
           </button>
         </div>
       </div>
@@ -319,16 +312,19 @@
 
   <div class="loading" *ngIf="!gameInfo">Cargando juego...</div>
 
-  <div 
-    *ngIf="showRematchModal" 
-    class="modal-overlay" 
+  <div
+    *ngIf="showRematchModal"
+    class="modal-overlay"
     (click)="closeRematchModal()"
   >
     <div class="modal-content rematch-modal" (click)="$event.stopPropagation()">
       <h3>🎮 ¡Revancha Propuesta!</h3>
-      
+
       <div class="rematch-info">
-        <p><strong>{{ rematchData?.hostName || 'El anfitríon' }}</strong> ha propuesto una revancha.</p>
+        <p>
+          <strong>{{ rematchData?.hostName || "El anfitríon" }}</strong> ha
+          propuesto una revancha.
+        </p>
       </div>
 
       <div class="rematch-question">
@@ -336,19 +332,19 @@
       </div>
 
       <div class="rematch-actions">
-        <button 
-          (click)="respondToRematch(true)" 
+        <button
+          (click)="respondToRematch(true)"
           class="accept-btn"
           [disabled]="isLoading"
         >
-          {{ isLoading ? 'Aceptando...' : '✅ Sí, jugar revancha' }}
+          {{ isLoading ? "Aceptando..." : "✅ Sí, jugar revancha" }}
         </button>
-        <button 
-          (click)="respondToRematch(false)" 
+        <button
+          (click)="respondToRematch(false)"
           class="decline-btn"
           [disabled]="isLoading"
         >
-          {{ isLoading ? 'Rechazando...' : '❌ No, gracias' }}
+          {{ isLoading ? "Rechazando..." : "❌ No, gracias" }}
         </button>
       </div>
 
@@ -356,15 +352,15 @@
       <div class="rematch-status" *ngIf="rematchResponses.length > 0">
         <h4>Respuestas de jugadores:</h4>
         <div class="player-responses">
-          <div 
-            *ngFor="let response of rematchResponses" 
+          <div
+            *ngFor="let response of rematchResponses"
             class="player-response"
             [class.accepted]="response.accepted"
             [class.declined]="!response.accepted"
           >
             <span class="player-name">{{ response.playerName }}</span>
             <span class="response-status">
-              {{ response.accepted ? '✅ Acepta' : '❌ Rechaza' }}
+              {{ response.accepted ? "✅ Acepta" : "❌ Rechaza" }}
             </span>
           </div>
         </div>
@@ -373,15 +369,12 @@
   </div>
 
   <!-- Modal de esperando respuestas (para el host) -->
-  <div 
-    *ngIf="showWaitingModal" 
-    class="modal-overlay"
-  >
+  <div *ngIf="showWaitingModal" class="modal-overlay">
     <div class="modal-content waiting-modal">
       <!-- Estado de espera -->
       <div *ngIf="rematchStatus === 'waiting'">
         <h3>🕰️ Esperando Respuestas</h3>
-        
+
         <div class="waiting-info">
           <p>Revancha propuesta. Esperando que los jugadores respondan...</p>
         </div>
@@ -390,7 +383,7 @@
       <!-- Estado de éxito -->
       <div *ngIf="rematchStatus === 'success'" class="success-state">
         <h3>🎉 ¡Éxito!</h3>
-        
+
         <div class="success-info">
           <p>¡Todos los jugadores aceptaron la revancha!</p>
           <p>🚀 Redirigiendo a la nueva partida...</p>
@@ -400,7 +393,7 @@
       <!-- Estado de fallo -->
       <div *ngIf="rematchStatus === 'failed'" class="failed-state">
         <h3>❌ Revancha Cancelada</h3>
-        
+
         <div class="failed-info">
           <p>Un jugador rechazó la propuesta de revancha.</p>
           <p>El modal se cerrará automáticamente...</p>
@@ -410,8 +403,8 @@
       <div class="rematch-status">
         <h4>Estado actual:</h4>
         <div class="player-responses">
-          <div 
-            *ngFor="let response of rematchResponses" 
+          <div
+            *ngFor="let response of rematchResponses"
             class="player-response"
             [class.accepted]="response.accepted"
             [class.declined]="!response.accepted && response.responded"
@@ -420,7 +413,9 @@
             <span class="player-name">{{ response.playerName }}</span>
             <span class="response-status">
               <span *ngIf="response.accepted">✅ Acepta</span>
-              <span *ngIf="!response.accepted && response.responded">❌ Rechaza</span>
+              <span *ngIf="!response.accepted && response.responded"
+                >❌ Rechaza</span
+              >
               <span *ngIf="!response.responded">⏳ Esperando...</span>
             </span>
           </div>
