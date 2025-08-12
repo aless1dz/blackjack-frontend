@@ -507,26 +507,44 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   shouldHideCard(player: Player, card: any): boolean {
-    if (this.gameInfo?.status === 'finished') return false;
-    if (this.isHost) return false;
-    if (this.isCurrentUser(player)) return false;
-    if (player.isHost) return true;
-    return true;
+    // Ahora el backend maneja la lógica, solo verificamos si la carta está marcada como oculta
+    if (typeof card === 'object' && card.hidden === true) {
+      return true;
+    }
+    if (card === 'HIDDEN' || (typeof card === 'object' && card.display === 'HIDDEN')) {
+      return true;
+    }
+    return false;
   }
 
   getPlayerCards(player: any): any[] {
+    // Si el servidor envió formattedCards, usar esas
     if (player.formattedCards && player.formattedCards.length > 0) {
       return player.formattedCards.map((cardString: string) => ({
         display: cardString,
+        hidden: false
       }));
     }
 
+    // Si no hay formattedCards pero hay cardCount, significa que las cartas están ocultas
+    if (player.cardCount && player.cardCount > 0) {
+      // Crear array de cartas ocultas basado en la cantidad
+      return Array.from({ length: player.cardCount }, () => ({
+        display: 'HIDDEN',
+        hidden: true
+      }));
+    }
+
+    // Fallback al método anterior para compatibilidad
     if (player.cards && player.cards.length > 0) {
       return player.cards.map((card: any) => {
-        if (card.formatted) {
-          return { display: card.formatted };
+        if (card.card === 'HIDDEN') {
+          return { display: 'HIDDEN', hidden: true };
         }
-        return { display: card.card || card };
+        if (card.formatted) {
+          return { display: card.formatted, hidden: false };
+        }
+        return { display: card.card || card, hidden: false };
       });
     }
 

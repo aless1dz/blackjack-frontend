@@ -380,7 +380,6 @@
         </div>
       </div>
 
-      <!-- Estado de éxito -->
       <div *ngIf="rematchStatus === 'success'" class="success-state">
         <h3>🎉 ¡Éxito!</h3>
 
@@ -403,21 +402,8 @@
       <div class="rematch-status">
         <h4>Estado actual:</h4>
         <div class="player-responses">
-          <div
-            *ngFor="let response of rematchResponses"
-            class="player-response"
-            [class.accepted]="response.accepted"
-            [class.declined]="!response.accepted && response.responded"
-            [class.pending]="!response.responded"
-          >
-            <span class="player-name">{{ response.playerName }}</span>
-            <span class="response-status">
-              <span *ngIf="response.accepted">✅ Acepta</span>
-              <span *ngIf="!response.accepted && response.responded"
-                >❌ Rechaza</span
-              >
-              <span *ngIf="!response.responded">⏳ Esperando...</span>
-            </span>
+          <div>
+            Esperando Que Todos los Jugadores Respondan
           </div>
         </div>
       </div>
